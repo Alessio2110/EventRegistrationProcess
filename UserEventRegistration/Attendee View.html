@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Attendee Client for Event Registration Service</title>
+</head>
+
+<body>
+  <h1>Attendee View</h1>
+  <div>
+    <input type="text" id="user_name" placeholder="all users" />
+    <button type="button" onclick="read_events_request();">List Events</button>
+  </div>
+  <hr />
+  <div>
+    <input type="text" id="event_text" placeholder="Event ID" />
+
+    <button type="button" onclick="register_user_event();">Add</button>
+    <button type="button" onclick="delete_registration();">Cancel</button>
+
+  </div>
+  <hr />
+  <pre id="output">
+    </pre>
+
+  <script>
+
+    //Get all events 
+    function read_events_request() {
+      const user_id = document.getElementById('user_name').value;
+      let url = 'http://localhost:8080/users';
+      if (user_id != '') {
+        // console.log("Retrieving all events user '" + user_id + "' registered for.");
+        url += "/" + user_id;
+      }
+      else {
+        // console.log("No user ID, retrieving all events.")
+      }
+      let clone;
+      let status;
+      fetch(url).
+        then((response) => {
+          clone = response;
+          output.innerHTML = "Status " + response.status + "\n";
+
+          if (response.ok)
+            return response.json()
+          else return null
+        }).
+        then(d => {
+          const theOutput = JSON.stringify(d, undefined, 4)
+          if (theOutput != "null")
+            output.innerHTML += theOutput;
+          else
+            output.innerHTML += "[]";
+
+        }).
+        catch(error => output.innerHTML = error);
+    }
+
+    async function register_user_event() {
+      try {
+        const user_id = document.getElementById('user_name').value;
+        url = "https://pmaier.eu.pythonanywhere.com/user/" + user_id;
+        const response = await fetch(url);
+        const data = await response.json();
+        const thejson = JSON.stringify(data['user']);
+        // console.log("The user json object in string form:" + thejson);
+        if (response.status != 200){
+          output.innerHTML += "Status 400 \n No user found in the user service with the id: \"" + user_id + " \".";
+        }
+        //This does work
+        const event_id = document.getElementById('event_text').value;
+        if (event_id == '') {
+          output.innerHTML = "You should add an event id before registering for an event";
+          return;
+        }
+
+        url2 = 'http://localhost:8080/events/' + event_id;
+        const response2 = await fetch(url2, {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data['user']),
+        })
+        const status = response2.status;
+        output.innerHTML = "Status " + status + "\n";
+        
+        
+      }
+      catch (error) {
+        console.error(error);
+      }
+    }
+
+    // Delete 
+    function delete_registration() {
+      const output = document.getElementById('output');
+      const user_id = document.getElementById('user_name').value;
+      const event_id = document.getElementById('event_text').value;
+      if (user_id == '') {
+        output.innerHTML = "You should add a user id before trying to cancel a registration for an event";
+        return;
+      } 
+      if (event_id == '') {
+        output.innerHTML = "You should add an event id before trying to cancel a registration for an event";
+        return;
+      }
+      let url = 'http://localhost:8080/users/' + user_id + "/events/" + event_id;
+      fetch(url, {
+        method: "DELETE"
+      })
+        .then(function (response) {
+          output.innerHTML = (response.status);
+        })
+    }
+    
+
+  </script>
+</body>
+
+</html>

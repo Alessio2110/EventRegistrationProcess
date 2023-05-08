@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Client for Event Registration Service</title>
+</head>
+
+<body>
+
+  <h1> Admin View</h1>
+
+  <div>
+    <input type="text" id="user_name" placeholder="all users" />
+    <button type="button" onclick="read_events_request();">List Events</button>
+  </div>
+  <hr />
+  <div>
+    <input type="text" id="event_text" placeholder="Event ID" />
+
+    <button type="button" onclick="getAttendees();">List Attendees</button>
+    <button type="button" onclick="validate();">Validate Attendees</button>
+  </div>
+  <hr />
+  <pre id="output">
+    </pre>
+
+  <script>
+
+    // }
+    //GET all events
+    function read_events_request() {
+      const user_id = document.getElementById('user_name').value;
+      let url = 'http://localhost:8080/users';
+      if (user_id != '') {
+        // console.log("Retrieving all events user '" + user_id + "' registered for.");
+        url += "/" + user_id;
+      }
+      else {
+        // console.log("No user ID, retrieving all events.")
+      }
+      let clone;
+      let status;
+      fetch(url).
+        then((response) => {
+          clone = response;
+          output.innerHTML = "Status: " + response.status + "\n";
+
+          if (response.ok)
+            return response.json()
+          else return null
+        }).
+        then(d => {
+          const theOutput = JSON.stringify(d, undefined, 4)
+          if (theOutput != "null")
+            output.innerHTML += JSON.stringify(d, undefined, 4);
+          else
+            output.innerHTML += "[]";
+
+        }).
+        catch(error => output.innerHTML = error);
+    }
+
+    async function getAttendees() {
+      try {
+        const event_id = document.getElementById('event_text').value;
+        url = "http://localhost:8080/admin/events/" + event_id;
+        const response = await fetch(url);
+        
+        output.innerHTML = "Status: " + response.status + "\n";
+        if (response.ok) {
+          const data = await response.json();
+          const thejson = JSON.stringify(data, null, 3);
+          for (var prop in data) {
+            // console.log("Key:" + prop);
+            // console.log("Value:" + JSON.stringify(data[prop]));
+          }
+          output.innerHTML += thejson;
+        }
+      }
+      catch (error) {
+        console.log(error);
+      }
+    }
+
+    async function validate() {
+      try {
+        const eid = document.getElementById('event_text').value;
+        url = "http://localhost:8080/admin/events/" + eid;
+        const response = await fetch(url);
+        output.innerHTML = "Status:" +  response.status + "\n\n";
+        if (!response.ok){
+          reutrn;
+        }
+        const data = await response.json();
+        const json_data = JSON.stringify(data, null, 3);
+
+        var count = JSON.parse(json_data).length;
+        if (count < 1){
+          output.innerHTML += "No attendee registered for this event";
+          return;
+        }
+
+        output.innerHTML += "Validating " + count + " attendees: \n";
+        
+        if (response.ok) {
+          for (var prop in data) {
+            var jsonObject = data[prop]
+            var jsonObjectString = JSON.stringify(data[prop])
+            // console.log("Value (validation):" + jsonObjectString );
+
+            let uid = JSON.stringify(jsonObject['uid']); //get the id
+            let name = JSON.stringify(jsonObject['uid']);
+            uid = uid.replace(/"/g, ''); //Regex to remove quotes
+
+            url_user_service = 'https://pmaier.eu.pythonanywhere.com/user/' + uid;
+            const response_user_service = await fetch(url_user_service); 
+            const data_user_service = await response_user_service.json();
+            const json_data_user_service = JSON.stringify(data_user_service, null, 3);
+
+            if (!response_user_service.ok) {
+              output.innerHTML += ("Cancelled: " + (jsonObject['name'])).fontcolor("red") + "\n";
+              delete_registration(uid, eid);
+              continue;
+            }
+            user_us = data_user_service['user']
+
+            const formatted_user_details = JSON.stringify(user_us);
+            // console.log(formatted_user_details);
+
+            interests_user_service = user_us['interests']
+            interests_event_service = jsonObject['interests']
+
+            if (!interests_user_service == interests_event_service){
+              // console.log("Updating interests...");
+              // console.log("Old interests: " + interests_event_service)
+              // console.log("New interests: " + interests_user_service)
+              output.innerHTML += ("Validated: " + jsonObject['name']).fontcolor("green") + "(updated)".fontcolor("orange") + "\n";
+              
+              updateInterests(uid, formatted_user_details);
+            }
+            else
+            output.innerHTML += ("Validated: " + jsonObject['name']).fontcolor("green") + "\n";
+          
+          }
+        }
+      }
+      catch (error) {
+        console.log(error);
+      }
+    }
+
+    //Put
+    function update_interests(uid, user_details){
+      const output = document.getElementById('output');
+      const user_id = uid;
+      let url = 'http://localhost:8080/ding/' + user_id;
+      fetch(url, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: user_details,
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      })
+        .then(function (response) {
+          // output.innerHTML = (response.status);
+        })
+    }
+
+    // Delete 
+    function delete_registration(uid, eid) {
+      const output = document.getElementById('output');
+      const user_id = uid;
+      const event_id = eid;
+
+      let url = 'http://localhost:8080/users/' + user_id + "/events/" + event_id;
+      fetch(url, {
+        method: "DELETE"
+      })
+        .then(function (response) {
+        })
+    }
+
+  </script>
+</body>
+
+</html>

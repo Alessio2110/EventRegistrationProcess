@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Simple CRUD Client for the Welcome Service</title>
+  </head>
+  <body>
+    <div>
+      <input type="text" id="guest_name" placeholder="guest name"/>
+      <select id="guest_lang">
+        <option value="en">en</option>
+        <option value="es">es</option>
+        <option value="de">de</option>
+        <option value="fr">fr</option>
+        <option value="it">it</option>
+      </select>
+      <button type="button" onclick="ding_request();">ding</button>
+    </div>
+    <hr/>
+    <div>
+      <input type="text" id="lang" placeholder="language code"/>
+      <input type="text" id="msg" placeholder="welcome phrase"/>
+      <button type="button" onclick="create_request();">create</button>
+      <button type="button" onclick="update_request();">update</button>
+      <button type="button" onclick="delete_request();">delete</button>
+      <button type="button" onclick="read_all_request();">read all</button>
+    </div>
+    <hr/>
+    <div id="output">
+    </div>
+
+    <script>
+      function ding_request() {
+        const output = document.getElementById('output');
+        const name_val = document.getElementById('guest_name').value;
+        const lang_val = document.getElementById('guest_lang').value;
+        let url = 'http://localhost:8080/ding/' + lang_val;
+        if (name_val != '') {
+          url += '?name=' + name_val;
+        }
+        fetch(url).
+        then((response) => {
+          output.innerHTML = response.status + ":   ";
+          return response.json()
+        }).
+          then(data => output.innerHTML += JSON.stringify(data)).
+          catch(error => output.innerHTML = error);
+      }
+      //GET
+      function read_all_request() {
+        let url = 'http://localhost:8080/ding';
+        let clone;
+        let status;
+        fetch(url).
+        then((response) => {
+          clone = response;
+          output.innerHTML = response.status + ":   ";
+          // output.innerHTML = response.msg[0] + ":   ";
+          return response.json()
+        }).
+          // then(d => output.innerHTML += JSON.stringify(d.lang[1])).
+          then(d => {
+            var languages = document.getElementById('guest_lang');
+            // Clear options
+            languages.innerHTML = '';
+            d?.forEach(function(element){
+              //Create option
+              var option = document.createElement("option");
+              option.text = element['lang'];
+              option.value = element['lang'];
+              //Add it to the languages available
+              languages.appendChild(option);
+            });
+            // languages.remove(all)
+            output.innerHTML += JSON.stringify(d);
+          }).
+          catch(error => output.innerHTML = error);
+      }
+
+      //POST
+      function create_request() {
+        const output = document.getElementById('output');
+        const msg_val = document.getElementById('msg').value;
+        const lang_val = document.getElementById('lang').value;
+        let url = 'http://localhost:8080/ding'
+        fetch(url, {
+          method: "POST",
+          headers: {
+          'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            "lang": lang_val,
+            "msg": msg_val
+          }),
+          headers: {
+        "Content-type": "application/json; charset=UTF-8"
+          }
+        }).then(function(response) {
+              output.innerHTML = (response.status);
+        })
+      }
+      //PUT
+      function update_request(){
+        const output = document.getElementById('output');
+        const msg_val = document.getElementById('msg').value;
+        const lang_val = document.getElementById('lang').value;
+        let url = 'http://localhost:8080/ding/' + lang_val;
+        fetch(url, {
+          method: "PUT",
+          headers: {
+          'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            "lang": lang_val,
+            "msg": msg_val
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        })
+        .then(function(response) {
+              output.innerHTML = (response.status);
+        })
+      }
+
+      //DELETE
+
+      function delete_request(){
+        const output = document.getElementById('output');
+        const lang_val = document.getElementById('lang').value;
+        let url = 'http://localhost:8080/ding/' + lang_val;
+        fetch(url, {
+          method: "DELETE"
+        })
+        .then(function(response) {
+              output.innerHTML = (response.status);
+        })
+    }
+      
+    
+
+      
+    </script>
+  </body>
+</html>
